@@ -19,7 +19,6 @@
 
 import wx
 
-from .wxlocale import _
 from .wxlocale import setup_wx_locale
 from .loadframe import LoadFrame
 

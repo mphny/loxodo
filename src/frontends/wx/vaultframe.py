@@ -26,6 +26,7 @@ from ...config import config
 from .recordframe import RecordFrame
 from .mergeframe import MergeFrame
 from .settings import Settings
+from .taskbaricon import LoxodoTaskBarIcon
 
 from .paths import get_resourcedir
 
@@ -169,27 +170,8 @@ class VaultFrame(wx.Frame):
         filemenu.AppendSeparator()
         filemenu.Append(wx.ID_EXIT, _("E&xit"))
         wx.EVT_MENU(self, wx.ID_EXIT, self._on_exit)
-        self._recordmenu = wx.Menu()
-        self._recordmenu.Append(wx.ID_ADD, _("&Add\tCtrl+A"))
-        wx.EVT_MENU(self, wx.ID_ADD, self._on_add)
-        self._recordmenu.Append(wx.ID_DELETE, _("&Delete\tCtrl+Back"))
-        wx.EVT_MENU(self, wx.ID_DELETE, self._on_delete)
-        self._recordmenu.AppendSeparator()
-        self._recordmenu.Append(wx.ID_PROPERTIES, _("&Edit\tCtrl+E"))
-        wx.EVT_MENU(self, wx.ID_PROPERTIES, self._on_edit)
-        self._recordmenu.AppendSeparator()
-        temp_id = wx.NewId()
-        self._recordmenu.Append(temp_id, _("Copy &Username\tCtrl+U"))
-        wx.EVT_MENU(self, temp_id, self._on_copy_username)
-        temp_id = wx.NewId()
-        self._recordmenu.Append(temp_id, _("Copy &Password\tCtrl+P"))
-        wx.EVT_MENU(self, temp_id, self._on_copy_password)
-        temp_id = wx.NewId()
-        self._recordmenu.Append(temp_id, _("Open UR&L\tCtrl+L"))
-        wx.EVT_MENU(self, temp_id, self._on_open_url)
-        temp_id = wx.NewId()
-        self._recordmenu.Append(temp_id, _("Search &For Entry\tCtrl+F"))
-        wx.EVT_MENU(self, temp_id, self._on_search_for_entry)
+        self._recordmenu = self._create_recordmenu()
+        self._recordmenu_popup = self._create_recordmenu()
         menu_bar = wx.MenuBar()
         menu_bar.Append(filemenu, _("&Vault"))
         menu_bar.Append(self._recordmenu, _("&Record"))
@@ -229,6 +211,45 @@ class VaultFrame(wx.Frame):
         self.vault = None
         self._is_modified = False
 
+        self.icon = wx.Icon(os.path.join(os.path.dirname(os.path.realpath(config.get_basescript())), "resources", "loxodo-icon.png"),
+                            wx.BITMAP_TYPE_PNG, 128, 128)
+
+        if config.tray_icon:
+            self.tray_icon = LoxodoTaskBarIcon(self.icon, "Loxodo", self)
+        else:
+            self.tray_icon = None
+
+    def _create_recordmenu(self):
+        """
+        Create self._recordmenu or self._recordmenu_popup, a menu of actions
+        for the current record.
+
+        We need to create two of these because of:
+            https://forums.wxwidgets.org/viewtopic.php?t=39069
+        """
+        recordmenu = wx.Menu()
+        recordmenu.Append(wx.ID_ADD, _("&Add\tCtrl+A"))
+        wx.EVT_MENU(self, wx.ID_ADD, self._on_add)
+        recordmenu.Append(wx.ID_DELETE, _("&Delete\tCtrl+Back"))
+        wx.EVT_MENU(self, wx.ID_DELETE, self._on_delete)
+        recordmenu.AppendSeparator()
+        recordmenu.Append(wx.ID_PROPERTIES, _("&Edit\tCtrl+E"))
+        wx.EVT_MENU(self, wx.ID_PROPERTIES, self._on_edit)
+        recordmenu.AppendSeparator()
+        temp_id = wx.NewId()
+        recordmenu.Append(temp_id, _("Copy &Username\tCtrl+U"))
+        wx.EVT_MENU(self, temp_id, self._on_copy_username)
+        temp_id = wx.NewId()
+        recordmenu.Append(temp_id, _("Copy &Password\tCtrl+P"))
+        wx.EVT_MENU(self, temp_id, self._on_copy_password)
+        temp_id = wx.NewId()
+        recordmenu.Append(temp_id, _("Open UR&L\tCtrl+L"))
+        wx.EVT_MENU(self, temp_id, self._on_open_url)
+        temp_id = wx.NewId()
+        recordmenu.Append(temp_id, _("Search &For Entry\tCtrl+F"))
+        wx.EVT_MENU(self, temp_id, self._on_search_for_entry)
+        return recordmenu
+
     def _on_list_box_char(self, key_event):
         """
         Typing in the list box doesn't do anything, redirect it to the search box
@@ -242,7 +263,8 @@ class VaultFrame(wx.Frame):
             key_event.Skip()
             return
         self._searchbox.SetFocus()
-        self._searchbox.EmulateKeyPress(key_event)
+        # self._searchbox.EmulateKeyPress is tempting, but is missing in some versions of wxpython (wxgtk 3.0.2)
+        wx.UIActionSimulator().Char(key_event.GetKeyCode())
 
     def mark_modified(self):
         self._is_modified = True
@@ -348,7 +370,7 @@ class VaultFrame(wx.Frame):
         self.list.update_fields()
 
     def _on_list_contextmenu(self, dummy):
-        self.PopupMenu(self._recordmenu)
+        self.PopupMenu(self._recordmenu_popup)
 
     def _on_about(self, dummy):
         """
@@ -598,6 +620,20 @@ if not, write to the Free Software Foundation, Inc.,
         except RuntimeError:
             self.statusbar.SetStatusText(_('Error copying password of "%s" to clipboard') % entry.title, 0)
 
+    def _on_copy_url(self, dummy):
+        """
+        Event handler: Fires when user chooses this menu item.
+        """
+        index = self.list.GetFirstSelected()
+        if index == -1:
+            return
+        entry = self.list.displayed_entries[index]
+        try:
+            self._copy_to_clipboard(entry.url)
+            self.statusbar.SetStatusText(_('Copied URL of "%s" to clipboard') % entry.title, 0)
+        except RuntimeError:
+            self.statusbar.SetStatusText(_('Error copying URL of "%s" to clipboard') % entry.title, 0)
+
     def _on_open_url(self, dummy):
         """
         Event handler: Fires when user chooses this menu item.
@@ -635,6 +671,8 @@ if not, write to the Free Software Foundation, Inc.,
         """
         Event handler: Fires when user closes the frame
         """
+        if self.tray_icon:
+            self.tray_icon.Destroy()
         self.Destroy()
 
     def _on_searchbox_char(self, evt):
