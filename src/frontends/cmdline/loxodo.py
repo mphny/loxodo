@@ -178,7 +178,7 @@ class InteractiveConsole(cmd.Cmd):
         print "sort criteria is %s" % self.sort_key
         print "vi editing mode is %s" % self.vi
         print "tab completion is %s" % self.tabcomp
-        print "vervose mode is %s" % self.verbose
+        print "verbose mode is %s" % self.verbose
         print
 
     # This method should clear all data in self.vault.records because we
@@ -664,7 +664,7 @@ class InteractiveConsole(cmd.Cmd):
 
         print "TAB completion mode is %s" % self.tabcomp
 
-    def do_show(self, line, do_echo=False, hide_password=False):
+    def do_show(self, line, do_echo=True, hide_password=False):
         """
         Show the specified entry (including its password).
 
