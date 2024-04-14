@@ -89,24 +89,24 @@ class VaultFrame(wx.Frame):
             s = '--'
             record = self.displayed_entries[item]
             if col == 0:
-                s = record.title
+                return record.title or ''
             elif col == 1:
-                s = record.user
+                return record.user
             elif col == 2:
-                s = record.group
+                return record.group
             elif col == 3:
-                s = ''
                 i: int = record.last_mod
                 if i:
-                    s = datetime.fromtimestamp(i).strftime('%Y-%m-%d %H:%M:%S')
+                    return datetime.fromtimestamp(i).strftime('%Y-%m-%d %H:%M:%S')
+                return ''
             elif col == 4:
-                s = ''
                 i: int = record.created
                 if i:
-                    s = datetime.fromtimestamp(i).strftime('%Y-%m-%d %H:%M:%S')
+                    return datetime.fromtimestamp(i).strftime('%Y-%m-%d %H:%M:%S')
+                return ''
             elif col == 5:
                 s = record.url or ''
-            return s
+            return '--'
 
         def update_fields(self):
             """
@@ -250,7 +250,15 @@ class VaultFrame(wx.Frame):
         filemenu.Append(wx.ID_EXIT, _("E&xit"))
         self.Bind(wx.EVT_MENU, self._on_exit, id=wx.ID_EXIT)
 
+        self._id_copy_username = wx.NewId()
+        self._id_copy_password = wx.NewId()
+        self._id_totp = wx.NewId() if mintotp else None
+        self._id_open_url = wx.NewId()
+        self._id_copy_url = wx.NewId()
+        self._id_search = wx.NewId()
+
         self._recordmenu = wx.Menu()
+
         self._recordmenu.Append(wx.ID_ADD, _("&Add\tCtrl+Shift+A"))
         self.Bind(wx.EVT_MENU, self._on_add, id=wx.ID_ADD)
         self._recordmenu.Append(wx.ID_DUPLICATE, _("&Duplicate\tCtrl+D"))
@@ -262,30 +270,24 @@ class VaultFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_edit, id=wx.ID_PROPERTIES)
         self._recordmenu.AppendSeparator()
 
-        temp_id = wx.NewId()
-        self._recordmenu.Append(temp_id, _("Copy &Username\tCtrl+U"))
-        self.Bind(wx.EVT_MENU, self._on_copy_username, id=temp_id)
+        self._recordmenu.Append(self._id_copy_username, _("Copy &Username\tCtrl+U"))
+        self.Bind(wx.EVT_MENU, self._on_copy_username, id=self._id_copy_username)
 
-        temp_id = wx.NewId()
-        self._recordmenu.Append(temp_id, _("Copy &Password\tCtrl+P"))
-        self.Bind(wx.EVT_MENU, self._on_copy_password, id=temp_id)
+        self._recordmenu.Append(self._id_copy_password, _("Copy &Password\tCtrl+P"))
+        self.Bind(wx.EVT_MENU, self._on_copy_password, id=self._id_copy_password)
 
         if mintotp:
-            temp_id = wx.NewId()
-            self._recordmenu.Append(temp_id, _("Create &TOTP from Password\tCtrl+T"))
-            self.Bind(wx.EVT_MENU, self._on_totp, id=temp_id)
+            self._recordmenu.Append(self._id_totp, _("Create &TOTP from Password\tCtrl+T"))
+            self.Bind(wx.EVT_MENU, self._on_totp, id=self._id_totp)
 
-        temp_id = wx.NewId()
-        self._recordmenu.Append(temp_id, _("Open UR&L\tCtrl+L"))
-        self.Bind(wx.EVT_MENU, self._on_open_url, id=temp_id)
+        self._recordmenu.Append(self._id_open_url, _("Open UR&L\tCtrl+L"))
+        self.Bind(wx.EVT_MENU, self._on_open_url, id=self._id_open_url)
 
-        temp_id = wx.NewId()
-        self._recordmenu.Append(temp_id, _("Copy URL\tCtrl+Shift+L"))
-        self.Bind(wx.EVT_MENU, self._on_copy_url, id=temp_id)
+        self._recordmenu.Append(self._id_copy_url, _("Copy URL\tCtrl+Shift+L"))
+        self.Bind(wx.EVT_MENU, self._on_copy_url, id=self._id_copy_url)
 
-        temp_id = wx.NewId()
-        self._recordmenu.Append(temp_id, _("Search &For Entry\tCtrl+F"))
-        self.Bind(wx.EVT_MENU, self._on_search_for_entry, id=temp_id)
+        self._recordmenu.Append(self._id_search, _("Search &For Entry\tCtrl+F"))
+        self.Bind(wx.EVT_MENU, self._on_search_for_entry, id=self._id_search)
 
         menu_bar = wx.MenuBar()
         menu_bar.Append(filemenu, _("&Vault"))
@@ -443,7 +445,7 @@ class VaultFrame(wx.Frame):
         col = event.GetColumn()
         if col == 0:
             #self.list.sort_function = lambda e1: e1.title.lower()
-            self.list.sort_function = lambda e1: (e1.title.lower(), e1.user.lower(), e1.last_mod)
+            self.list.sort_function = lambda e1: ((e1.title or '').lower(), (e1.user or '').lower(), e1.last_mod)
         elif col == 1:
             #self.list.sort_function = lambda e1: e1.user.lower()
             self.list.sort_function = lambda e1: (e1.user.lower(), e1.last_mod)
@@ -457,7 +459,23 @@ class VaultFrame(wx.Frame):
         self.list.update_fields()
 
     def _on_list_contextmenu(self, dummy):
-        self.PopupMenu(self._recordmenu)
+        popup = wx.Menu()
+        popup.Append(wx.ID_ADD, _("&Add"))
+        popup.Append(wx.ID_DUPLICATE, _("&Duplicate"))
+        popup.Append(wx.ID_DELETE, _("&Delete"))
+        popup.AppendSeparator()
+        popup.Append(wx.ID_PROPERTIES, _("&Edit"))
+        popup.AppendSeparator()
+        popup.Append(self._id_copy_username, _("Copy &Username"))
+        popup.Append(self._id_copy_password, _("Copy &Password"))
+        if mintotp:
+            popup.Append(self._id_totp, _("Create &TOTP from Password"))
+        popup.Append(self._id_open_url, _("Open UR&L"))
+        popup.Append(self._id_copy_url, _("Copy URL"))
+        popup.Append(self._id_search, _("Search &For Entry"))
+
+        self.PopupMenu(popup)
+        popup.Destroy()
 
     def _on_about(self, dummy):
         """

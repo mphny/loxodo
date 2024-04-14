@@ -175,21 +175,48 @@ class Record:
         if raw_field.raw_type == Fields.UUID:
             self._uuid = UUID(bytes_le=raw_field.raw_value)
         elif raw_field.raw_type == Fields.GROUP:
-            self._group = raw_field.raw_value.decode('utf_8', 'replace')
+            try:
+                # Attempt a clean, strict decode first
+                self._group = raw_field.raw_value.decode('utf_8', 'strict')
+            except UnicodeDecodeError as e:
+        # Print the warning to stderr if it fails
+                print(f"Warning: UnicodeDecodeError encountered in GROUP field. {e}", file=sys.stderr)
+        # Fallback to 'replace' to ensure the program keeps running
+                self._group = raw_field.raw_value.decode('utf_8', 'replace')
         elif raw_field.raw_type == Fields.TITLE:
-            self._title = raw_field.raw_value.decode('utf_8', 'replace')
+            try:
+                self._title = raw_field.raw_value.decode('utf_8', 'strict')
+            except UnicodeDecodeError as e:
+                print(f"Warning: UnicodeDecodeError encountered in TITLE field. {e}", file=sys.stderr)
+                self._title = raw_field.raw_value.decode('utf_8', 'replace')
         elif raw_field.raw_type == Fields.USER:
-            self._user = raw_field.raw_value.decode('utf_8', 'replace')
+            try:
+               self._user = raw_field.raw_value.decode('utf_8', 'strict')
+            except UnicodeDecodeError as e:
+               print(f"Warning: UnicodeDecodeError encountered in USER field. {e}", file=sys.stderr)
+               self._user = raw_field.raw_value.decode('utf_8', 'replace')
         elif raw_field.raw_type == Fields.NOTES:
-            self._notes = raw_field.raw_value.decode('utf_8', 'replace')
+            try:
+               self._notes = raw_field.raw_value.decode('utf_8', 'strict')
+            except UnicodeDecodeError as e:
+               print(f"Warning: UnicodeDecodeError encountered in notes field. {e}", file=sys.stderr)
+               self._notes = raw_field.raw_value.decode('utf_8', 'replace')
         elif raw_field.raw_type == Fields.PASSWD:
-            self._passwd = raw_field.raw_value.decode('utf_8', 'replace')
+            try:
+               self._passwd = raw_field.raw_value.decode('utf_8', 'strict')
+            except UnicodeDecodeError as e:
+               print(f"Warning: UnicodeDecodeError encountered in PASSWORD field. {e}", file=sys.stderr)
+               self._passwd = raw_field.raw_value.decode('utf_8', 'replace')
         elif raw_field.raw_type == Fields.LAST_MOD and raw_field.raw_len == 4:
-            self._last_mod = struct.unpack("<L", raw_field.raw_value)[0]
+           self._last_mod = struct.unpack("<L", raw_field.raw_value)[0]
         elif raw_field.raw_type == Fields.CREATED and raw_field.raw_len == 4:
-            self._created = struct.unpack("<L", raw_field.raw_value)[0]
+           self._created = struct.unpack("<L", raw_field.raw_value)[0]
         elif raw_field.raw_type == Fields.URL:
-            self._url = raw_field.raw_value.decode('utf_8', 'replace')
+            try:
+               self._url = raw_field.raw_value.decode('utf_8', 'strict')
+            except UnicodeDecodeError as e:
+               print(f"Warning: UnicodeDecodeError encountered in URL field. {e}", file=sys.stderr)
+               self._url = raw_field.raw_value.decode('utf_8', 'replace')
 
     def mark_modified(self):
         self.last_mod = int(time.time())
