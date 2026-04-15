@@ -91,9 +91,9 @@ class VaultFrame(wx.Frame):
             if col == 0:
                 return record.title or ''
             elif col == 1:
-                return record.user
+                return record.user or ''
             elif col == 2:
-                return record.group
+                return record.group or ''
             elif col == 3:
                 i: int = record.last_mod
                 if i:
@@ -105,7 +105,7 @@ class VaultFrame(wx.Frame):
                     return datetime.fromtimestamp(i).strftime('%Y-%m-%d %H:%M:%S')
                 return ''
             elif col == 5:
-                s = record.url or ''
+                return record.url or ''
             return '--'
 
         def update_fields(self):
