@@ -33,8 +33,12 @@ def get_bitmap(fname):
 
 
 def get_icon(fname, width, height):
+    image = get_image(fname)
+    image = image.Scale(width, height, wx.IMAGE_QUALITY_HIGH)
+    bitmap = wx.Bitmap(image)
     icon = wx.Icon()
-    icon.CopyFromBitmap(get_bitmap(fname))
-    icon.SetWidth(width)
-    icon.SetHeight(height)
+    icon.CopyFromBitmap(bitmap)
+#    icon.CopyFromBitmap(get_bitmap(fname))
+#    icon.SetWidth(width)
+#    icon.SetHeight(height)
     return icon

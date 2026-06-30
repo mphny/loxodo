@@ -29,6 +29,7 @@ from datetime import datetime
 import re
 import shutil
 import subprocess
+import platform
 
 import wx
 import wx.adv
@@ -213,8 +214,11 @@ class VaultFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self._on_frame_close)
 
         self.panel = wx.Panel(self, -1)
-
-        self._searchbox = wx.SearchCtrl(self.panel, size=(200, 30))
+    
+        searchheight=30
+        if platform.system() == 'Darwin':
+            searchheight=-1
+        self._searchbox = wx.SearchCtrl(self.panel, size=(200, searchheight))
         # size(200, -1) --> too small height on Linux-x86_64
         self._searchbox.ShowCancelButton(True)
         self.list = self.VaultListCtrl(
@@ -258,35 +262,38 @@ class VaultFrame(wx.Frame):
         self._id_search = wx.NewId()
 
         self._recordmenu = wx.Menu()
-
-        self._recordmenu.Append(wx.ID_ADD, _("&Add\tCtrl+Shift+A"))
+        hotkey="Ctrl"
+        if platform.system() == 'Darwin':
+            hotkey="Ctrl"
+   
+        self._recordmenu.Append(wx.ID_ADD, _("&Add\t"+hotkey"+Shift+A"))
         self.Bind(wx.EVT_MENU, self._on_add, id=wx.ID_ADD)
-        self._recordmenu.Append(wx.ID_DUPLICATE, _("&Duplicate\tCtrl+D"))
+        self._recordmenu.Append(wx.ID_DUPLICATE, _("&Duplicate\t"+hotkey+"+D"))
         self.Bind(wx.EVT_MENU, self._on_add_duplicate, id=wx.ID_DUPLICATE)
-        self._recordmenu.Append(wx.ID_DELETE, _("&Delete\tCtrl+Del"))
+        self._recordmenu.Append(wx.ID_DELETE, _("&Delete\t"+hotkey+"+Del"))
         self.Bind(wx.EVT_MENU, self._on_delete, id=wx.ID_DELETE)
         self._recordmenu.AppendSeparator()
-        self._recordmenu.Append(wx.ID_PROPERTIES, _("&Edit\tCtrl+E"))
+        self._recordmenu.Append(wx.ID_PROPERTIES, _("&Edit\t"+hotkey+"+E"))
         self.Bind(wx.EVT_MENU, self._on_edit, id=wx.ID_PROPERTIES)
         self._recordmenu.AppendSeparator()
 
-        self._recordmenu.Append(self._id_copy_username, _("Copy &Username\tCtrl+U"))
+        self._recordmenu.Append(self._id_copy_username, _("Copy &Username\t"+hotkey+"+U"))
         self.Bind(wx.EVT_MENU, self._on_copy_username, id=self._id_copy_username)
 
-        self._recordmenu.Append(self._id_copy_password, _("Copy &Password\tCtrl+P"))
+        self._recordmenu.Append(self._id_copy_password, _("Copy &Password\t"+hotkey+"+P"))
         self.Bind(wx.EVT_MENU, self._on_copy_password, id=self._id_copy_password)
 
         if mintotp:
-            self._recordmenu.Append(self._id_totp, _("Create &TOTP from Password\tCtrl+T"))
+            self._recordmenu.Append(self._id_totp, _("Create &TOTP from Password\t"+hotkey+"+T"))
             self.Bind(wx.EVT_MENU, self._on_totp, id=self._id_totp)
 
-        self._recordmenu.Append(self._id_open_url, _("Open UR&L\tCtrl+L"))
+        self._recordmenu.Append(self._id_open_url, _("Open UR&L\t"+hotkey+"+L"))
         self.Bind(wx.EVT_MENU, self._on_open_url, id=self._id_open_url)
 
-        self._recordmenu.Append(self._id_copy_url, _("Copy URL\tCtrl+Shift+L"))
+        self._recordmenu.Append(self._id_copy_url, _("Copy URL\t"+hotkey+"+Shift+L"))
         self.Bind(wx.EVT_MENU, self._on_copy_url, id=self._id_copy_url)
 
-        self._recordmenu.Append(self._id_search, _("Search &For Entry\tCtrl+F"))
+        self._recordmenu.Append(self._id_search, _("Search &For Entry\t"+hotkey+"+F"))
         self.Bind(wx.EVT_MENU, self._on_search_for_entry, id=self._id_search)
 
         menu_bar = wx.MenuBar()
@@ -797,10 +804,13 @@ if not, write to the Free Software Foundation, Inc.,
         if index == -1:
             return
         entry = self.list.displayed_entries[index]
+        cmd_open="xdg-open"
+        if platform.system() == 'Darwin':
+            cmd_open="open"
         if entry.url:
             try:
-                if shutil.which("xdg-open"):
-                    subprocess.run(['xdg-open', entry.url], check=False)
+                if shutil.which(cmd_open):
+                    subprocess.run([cmd_open, entry.url], check=False)
                 else:
                     webbrowser.open(entry.url)
             except ImportError:
