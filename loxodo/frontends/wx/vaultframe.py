@@ -266,7 +266,7 @@ class VaultFrame(wx.Frame):
         if platform.system() == 'Darwin':
             hotkey="Ctrl"
    
-        self._recordmenu.Append(wx.ID_ADD, _("&Add\t"+hotkey"+Shift+A"))
+        self._recordmenu.Append(wx.ID_ADD, _("&Add\t"+hotkey+"+Shift+A"))
         self.Bind(wx.EVT_MENU, self._on_add, id=wx.ID_ADD)
         self._recordmenu.Append(wx.ID_DUPLICATE, _("&Duplicate\t"+hotkey+"+D"))
         self.Bind(wx.EVT_MENU, self._on_add_duplicate, id=wx.ID_DUPLICATE)
