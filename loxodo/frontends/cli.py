@@ -23,6 +23,7 @@ import os
 import sys
 from getpass import getpass
 import readline
+import argparse
 import cmd
 import re
 import csv
@@ -192,8 +193,10 @@ class InteractiveConsole(cmd.Cmd):
             print("No matches found.")
             return
 
+            print_arr('Group,title,url,user,last_mod\n')
         for record in vault_records:
-            print_arr(record.title, ' [', record.user, ']')
+            print_arr(record.group,' ,',record.title,' ,',record.url, ' ,[', record.user, '] ,' ,str(record.last_mod))
+
 
     def do_show(self, line, echo=True, passwd=False):
         """
@@ -291,6 +294,24 @@ Username : %s""",
 def main():
     args = sys.argv[1:]
     interactiveConsole = InteractiveConsole()
+    parser = argparse.ArgumentParser(
+        description="Loxodo Vault CLI - A command-line interface for PasswordSafe V3 Vaults"
+    )
+    parser.add_argument(
+        "vault_file",
+        nargs="?",
+        metavar="VAULT_FILE",
+        help="Path to the vault file (uses recent vault from config if omitted)"
+    )
+
+    parser.add_argument(
+        "-s", "--ls",
+        action="store_true",
+        dest="show_all",
+        default=False,
+        help="Show all vault entries and exit immediately"
+    )
+    parsed_args = parser.parse_args()
 
     if len(args) < 1:
         if config.recentvaults:
@@ -299,11 +320,16 @@ def main():
         else:
             print("No Vault specified, and none found in config.")
             sys.exit(2)
-    elif len(args) > 1:
-        print("More than one Vault specified")
-        sys.exit(2)
+    elif parsed_args.show_all and parsed_args.vault_file:
+        interactiveConsole.vault_file_name = parsed_args.vault_file
+        interactiveConsole.open_vault()
+        InteractiveConsole.do_ls(interactiveConsole,None)
+        sys.exit(0)
+    elif parsed_args.vault_file:
+        interactiveConsole.vault_file_name = parsed_args.vault_file
     else:
-        interactiveConsole.vault_file_name = args[0]
+        print("No Vault specified, and none found in config.")
+        sys.exit(2)
 
     interactiveConsole.open_vault()
     interactiveConsole.cmdloop()
